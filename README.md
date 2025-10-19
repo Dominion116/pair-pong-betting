@@ -95,7 +95,7 @@ pairPong.finalizeMatch(matchId, winnerAddress);
 
 ```solidity
 // Get match details
-IPairPong.Match memory match = pairPong.getMatch(matchId);
+IPairPong.Match memory matchData = pairPong.getMatch(matchId);
 
 // Get all pending matches
 uint256[] memory pending = pairPong.getPendingMatches();
