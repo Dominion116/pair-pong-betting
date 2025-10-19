@@ -32,8 +32,8 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
     /// @notice Maximum bet amount in wei
     uint256 public maxBetAmount;
 
-    /// @notice Mapping of match ID to Match struct
-    mapping(uint256 => Match) public matches;
+    /// @notice Mapping of match ID to MatchData struct
+    mapping(uint256 => MatchData) public matches;
 
     /// @notice Mapping of user address to their match IDs
     mapping(address => uint256[]) public userMatches;
@@ -105,7 +105,7 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
 
         matchId = ++matchCounter;
 
-        matches[matchId] = Match({
+        matches[matchId] = MatchData({
             id: matchId,
             player1: msg.sender,
             player2: address(0),
@@ -139,7 +139,7 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
         uint256 matchId,
         address tokenSelected
     ) external payable nonReentrant {
-        Match storage matchData = matches[matchId];
+        MatchData storage matchData = matches[matchId];
 
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
         if (matchData.status != MatchStatus.Pending) revert MatchNotPending();
@@ -169,7 +169,7 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
         uint256 matchId,
         address winner
     ) external onlyAdmin nonReentrant {
-        Match storage matchData = matches[matchId];
+        MatchData storage matchData = matches[matchId];
 
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
         if (matchData.status != MatchStatus.Active) revert MatchNotActive();
@@ -207,7 +207,7 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
     function cancelMatch(
         uint256 matchId
     ) external onlyOwnerOrAdmin nonReentrant {
-        Match storage matchData = matches[matchId];
+        MatchData storage matchData = matches[matchId];
 
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
         if (
@@ -309,7 +309,7 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
      * @param matchId ID of the match
      * @return Match struct containing all match data
      */
-    function getMatch(uint256 matchId) external view returns (Match memory) {
+    function getMatch(uint256 matchId) external view returns (MatchData memory) {
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
         return matches[matchId];
     }
