@@ -7,13 +7,48 @@ out/
 /broadcast/*/31337/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
-
 # Dotenv file
 .env
 
-lib/openzeppelin-contracts/
-lib/forge-std/
-.idx
+# Node modules
+node_modules/
 
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage files
+coverage/
+lcov.info
+*.lcov
+
+# Gas reports
+gas-report.txt
+
+# Dependency directories
+lib/
+
+# Snapshots
+.forge-snapshots/
+
+# Typescript
+*.tsbuildinfo
+
+# Hardhat (if used alongside Foundry)
+artifacts/
+typechain/
+typechain-types/
+
+# Local development
+deployments/local/
+
+# Test artifacts
+test-results/
+test-report.xml
