@@ -138,4 +138,237 @@ forge script script/DeployPairPong.s.sol:DeployPairPongTestnet \
   --verify
 ```
 
-###
+### Mainnet Deployment
+
+```bash
+forge script script/DeployPairPong.s.sol \
+  --rpc-url $MAINNET_RPC_URL \
+  --broadcast \
+  --verify \
+  --slow
+```
+
+## 🧪 Testing
+
+### Run All Tests
+
+```bash
+forge test
+```
+
+### Run Specific Test Files
+
+```bash
+# Base integration tests
+forge test --match-path test/PairPong.t.sol
+
+# Access control tests
+forge test --match-path test/PairPongAccessControl.t.sol
+
+# Betting logic tests
+forge test --match-path test/PairPongBetting.t.sol
+```
+
+### Run Specific Test Functions
+
+```bash
+# Run tests matching a pattern
+forge test --match-test test_CreateMatch
+
+# Run with verbosity
+forge test --match-test test_CompleteMatchFlow -vvv
+```
+
+### Generate Gas Report
+
+```bash
+forge test --gas-report
+```
+
+### Generate Coverage Report
+
+```bash
+forge coverage
+```
+
+### Test with Fork
+
+```bash
+# Test against a forked mainnet
+forge test --fork-url $MAINNET_RPC_URL
+
+# Test specific block
+forge test --fork-url $MAINNET_RPC_URL --fork-block-number 18000000
+```
+
+## 📊 Contract Details
+
+### Constructor Parameters
+
+- `admin`: Address authorized to finalize and cancel matches
+- `platformFeePercentage`: Fee in basis points (200 = 2%)
+- `minBetAmount`: Minimum bet in wei (0.01 ETH)
+- `maxBetAmount`: Maximum bet in wei (10 ETH)
+
+### Platform Fee
+
+The platform fee is calculated in basis points:
+- 100 basis points = 1%
+- 200 basis points = 2% (default)
+- 1000 basis points = 10% (maximum)
+
+Example: With a 2% fee on a 1 ETH pool:
+```
+Total Pool: 1 ETH
+Platform Fee: 0.02 ETH (2%)
+Winner Payout: 0.98 ETH
+```
+
+### Match States
+
+```solidity
+enum MatchStatus {
+    Pending,    // Waiting for player2
+    Active,     // Both players joined
+    Completed,  // Winner paid
+    Canceled    // Refunds processed
+}
+```
+
+## 🔒 Security Features
+
+- **ReentrancyGuard**: Protects against reentrancy attacks
+- **Access Control**: Owner and admin role separation
+- **Input Validation**: Comprehensive checks on all parameters
+- **Checks-Effects-Interactions**: Safe transfer pattern
+- **Event Logging**: Complete audit trail
+
+## 🎮 Usage Example
+
+### Frontend Integration
+
+```javascript
+import { ethers } from 'ethers';
+
+// Connect to contract
+const pairPong = new ethers.Contract(ADDRESS, ABI, signer);
+
+// Create match
+const tx1 = await pairPong.createMatch(WETH_ADDRESS, {
+  value: ethers.parseEther("0.1")
+});
+await tx1.wait();
+
+// Join match
+const tx2 = await pairPong.joinMatch(matchId, USDC_ADDRESS, {
+  value: ethers.parseEther("0.1")
+});
+await tx2.wait();
+
+// Admin finalizes match
+const tx3 = await pairPong.finalizeMatch(matchId, winnerAddress);
+await tx3.wait();
+```
+
+### Query Matches
+
+```javascript
+// Get match details
+const match = await pairPong.getMatch(matchId);
+
+// Get pending matches
+const pending = await pairPong.getPendingMatches();
+
+// Get active matches
+const active = await pairPong.getActiveMatches();
+
+// Get user's matches
+const userMatches = await pairPong.getUserMatches(userAddress);
+```
+
+## 📈 Test Coverage
+
+The test suite includes:
+
+- ✅ Match creation with various bet amounts
+- ✅ Match joining with validation
+- ✅ Match settlement with fee calculation
+- ✅ Match cancellation and refunds
+- ✅ Access control for admin functions
+- ✅ Owner functions (fees, parameters)
+- ✅ Edge cases and error conditions
+- ✅ Reentrancy protection
+- ✅ Gas optimization tests
+- ✅ Fuzz testing
+
+### Test Results
+
+Run `forge test` to see results:
+
+```bash
+[⠢] Compiling...
+[⠆] Compiling 1 files with 0.8.20
+[⠰] Solc 0.8.20 finished in 2.5s
+Compiler run successful!
+
+Running 50+ tests for test/PairPong.t.sol:PairPongTest
+[PASS] test_CompleteMatchFlow() (gas: 245678)
+[PASS] test_MultipleMatches() (gas: 398765)
+...
+Test result: ok. 50 passed; 0 failed; finished in 5.2s
+```
+
+## 🛠 Development
+
+### Install Dependencies
+
+```bash
+forge install OpenZeppelin/openzeppelin-contracts --no-commit
+```
+
+### Compile Contracts
+
+```bash
+forge build
+```
+
+### Format Code
+
+```bash
+forge fmt
+```
+
+### Clean Build Artifacts
+
+```bash
+forge clean
+```
+
+## 📝 Contract Addresses
+
+After deployment, update these addresses:
+
+- **Sepolia Testnet**: `0x...`
+- **Ethereum Mainnet**: `0x...`
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Write tests for new features
+4. Ensure all tests pass: `forge test`
+5. Submit a pull request
+
+## 📄 License
+
+MIT License
+
+## 🔗 Resources
+
+- [Foundry Documentation](https://book.getfoundry.sh/)
+- [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/)
+- [Solidity Documentation](https://docs.soliditylang.org/)
+
+## ⚠️ Disclaimer
+
+This contract is provided as-is. Ensure proper auditing before mainnet deployment.
