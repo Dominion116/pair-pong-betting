@@ -44,7 +44,7 @@ contract PairPong is IPairPong, Ownable, ReentrancyGuard {
     // ============ Constants ============
 
     uint256 private constant BASIS_POINTS = 10000; // 100% = 10000 basis points
-    uint256 private constant MAX_FEE_PERCENTAGE = 100; // Max 1% fee
+    uint256 private constant MAX_FEE_PERCENTAGE = 200; // Max 2% fee
 
     // ============ Modifiers ============
 
