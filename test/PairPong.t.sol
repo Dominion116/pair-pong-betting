@@ -292,7 +292,7 @@ contract PairPongViewFunctionsTest is PairPongTest {
     function test_GetMatch() public {
         uint256 matchId = createMatch(player1, address(token1), DEFAULT_BET);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
 
         assertEq(matchData.id, matchId);
         assertEq(matchData.player1, player1);

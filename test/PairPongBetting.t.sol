@@ -22,7 +22,7 @@ contract PairPongBettingTest is PairPongTest {
         assertEq(pairPong.matchCounter(), 1);
         assertEq(player1.balance, balanceBefore - DEFAULT_BET);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.id, matchId);
         assertEq(matchData.player1, player1);
         assertEq(matchData.token1, address(token1));
@@ -53,14 +53,14 @@ contract PairPongBettingTest is PairPongTest {
     function test_CreateMatch_AcceptsMinBet() public {
         uint256 matchId = createMatch(player1, address(token1), MIN_BET);
         
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.amount, MIN_BET);
     }
 
     function test_CreateMatch_AcceptsMaxBet() public {
         uint256 matchId = createMatch(player1, address(token1), MAX_BET);
         
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.amount, MAX_BET);
     }
 
@@ -95,7 +95,7 @@ contract PairPongBettingTest is PairPongTest {
 
         assertEq(player2.balance, balanceBefore - DEFAULT_BET);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.player2, player2);
         assertEq(matchData.token2, address(token2));
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Active));
@@ -172,7 +172,7 @@ contract PairPongBettingTest is PairPongTest {
 
         finalizeMatch(matchId, player1);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.winner, player1);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Completed));
         assertEq(player1.balance, player1BalanceBefore + expectedPayout);
@@ -188,7 +188,7 @@ contract PairPongBettingTest is PairPongTest {
 
         finalizeMatch(matchId, player2);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.winner, player2);
         assertEq(player2.balance, player2BalanceBefore + expectedPayout);
     }
@@ -266,7 +266,7 @@ contract PairPongBettingTest is PairPongTest {
 
         cancelMatch(matchId);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Canceled));
         assertEq(player1.balance, player1BalanceBefore + DEFAULT_BET);
     }
@@ -281,7 +281,7 @@ contract PairPongBettingTest is PairPongTest {
 
         cancelMatch(matchId);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Canceled));
         assertEq(player1.balance, player1BalanceBefore + DEFAULT_BET);
         assertEq(player2.balance, player2BalanceBefore + DEFAULT_BET);
@@ -375,7 +375,7 @@ contract PairPongBettingTest is PairPongTest {
 
         uint256 matchId = createMatch(player1, address(token1), betAmount);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.amount, betAmount);
     }
 
@@ -385,7 +385,7 @@ contract PairPongBettingTest is PairPongTest {
         uint256 matchId = createMatch(player1, address(token1), betAmount);
         joinMatch(player2, matchId, address(token2), betAmount);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Active));
         assertEq(matchData.amount, betAmount);
     }

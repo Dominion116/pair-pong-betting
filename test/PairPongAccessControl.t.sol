@@ -42,7 +42,7 @@ contract PairPongAccessControlTest is PairPongTest {
         vm.prank(admin);
         pairPong.finalizeMatch(matchId, player1);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Completed));
     }
 
@@ -60,7 +60,7 @@ contract PairPongAccessControlTest is PairPongTest {
         vm.prank(admin);
         pairPong.cancelMatch(matchId);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Canceled));
     }
 
@@ -78,7 +78,7 @@ contract PairPongAccessControlTest is PairPongTest {
         vm.prank(owner);
         pairPong.cancelMatch(matchId);
 
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Canceled));
     }
 
@@ -314,8 +314,8 @@ contract PairPongAccessControlTest is PairPongTest {
         vm.prank(owner);
         pairPong.cancelMatch(match2);
 
-        IPairPong.Match memory matchData1 = pairPong.getMatch(match1);
-        IPairPong.Match memory matchData2 = pairPong.getMatch(match2);
+        IPairPong.MatchData memory matchData1 = pairPong.getMatch(match1);
+        IPairPong.MatchData memory matchData2 = pairPong.getMatch(match2);
 
         assertEq(uint8(matchData1.status), uint8(IPairPong.MatchStatus.Canceled));
         assertEq(uint8(matchData2.status), uint8(IPairPong.MatchStatus.Canceled));

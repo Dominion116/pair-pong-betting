@@ -18,7 +18,7 @@ interface IPairPong {
 
     // ============ Structs ============
 
-    struct Match {
+    struct MatchData{
         uint256 id;
         address player1;
         address player2;
@@ -101,7 +101,7 @@ interface IPairPong {
 
     // ============ View Functions ============
 
-    function getMatch(uint256 matchId) external view returns (Match memory);
+    function getMatch(uint256 matchId) external view returns (MatchData memory);
 
     function getActiveMatches() external view returns (uint256[] memory);
 
