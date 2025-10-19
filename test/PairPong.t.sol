@@ -192,7 +192,7 @@ contract PairPongIntegrationTest is PairPongTest {
         uint256 matchId = createMatch(player1, address(token1), DEFAULT_BET);
 
         // Verify match created
-        IPairPong.Match memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.player1, player1);
         assertEq(matchData.token1, address(token1));
         assertEq(matchData.amount, DEFAULT_BET);
