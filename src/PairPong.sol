@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import "./interfaces/IPairPong.sol";
 
 /**
@@ -11,7 +12,7 @@ import "./interfaces/IPairPong.sol";
  * @dev Users stake ETH and select tokens. Frontend determines winner and calls finalizeMatch()
  * @author PairPong Team
  */
-contract PairPong is IPairPong, Ownable, ReentrancyGuard {
+contract PairPong is IPairPong, Ownable2Step, ReentrancyGuard {
     // ============ State Variables ============
 
     /// @notice Admin address authorized to finalize and cancel matches
