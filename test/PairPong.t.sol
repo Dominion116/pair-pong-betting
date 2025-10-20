@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/Test.sol" as ForgeTest;
-import "../src/PairPong.sol" as PP;
-import "./mocks/MockERC20.sol" as Mock;
-import "../src/interfaces/IPairPong.sol" as IPairPong;
+import "forge-std/Test.sol";
+import "../src/PairPong.sol";
+import "../src/interfaces/IPairPong.sol";
+import "./mocks/MockERC20.sol";
 
 /**
  * @title PairPongTest
  * @notice Base test contract with common setup and helper functions
  * @dev Extended by specific test contracts
  */
-contract PairPongTest is ForgeTest.Test {
+contract PairPongTest is Test {
     // ============ Contracts ============
-    PP.PairPong public pairPong;
-    Mock.MockERC20 public token1;
-    Mock.MockERC20 public token2;
-    Mock.MockERC20 public token3;
+    PairPong public pairPong;
+    MockERC20 public token1;
+    MockERC20 public token2;
+    MockERC20 public token3;
 
     // ============ Test Accounts ============
     address public owner;
@@ -87,12 +87,12 @@ contract PairPongTest is ForgeTest.Test {
 
         // Deploy contract as owner
         vm.prank(owner);
-        pairPong = new PP.PairPong(admin, PLATFORM_FEE, MIN_BET, MAX_BET);
+        pairPong = new PairPong(admin, PLATFORM_FEE, MIN_BET, MAX_BET);
 
         // Deploy mock tokens
-        token1 = new Mock.MockERC20("Token1", "TK1", 18);
-        token2 = new Mock.MockERC20("Token2", "TK2", 18);
-        token3 = new Mock.MockERC20("Token3", "TK3", 18);
+        token1 = new MockERC20("Token1", "TK1", 18);
+        token2 = new MockERC20("Token2", "TK2", 18);
+        token3 = new MockERC20("Token3", "TK3", 18);
 
         // Label addresses for better trace output
         vm.label(address(pairPong), "PairPong");
