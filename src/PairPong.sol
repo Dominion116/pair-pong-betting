@@ -9,13 +9,17 @@ import "./interfaces/IPairPong.sol" as IPP;
 /**
  * @title PairPong
  * @notice A 1v1 betting contract where users bet on crypto token performance
- * @dev Users stake ETH and select tokens. Frontend determines winner and calls finalizeMatch()
+ * @dev Users stake ETH and select tokens. Frontend determines winner and calls finalizeMatch().
+ *      Fees are stored and expressed in BPS (basis points). MAX cap is inclusive.
  */
 contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.ReentrancyGuard {
     // ============ State Variables ============
     address public admin;
     uint256 public matchCounter;
+
+    // Fee is stored as BPS (e.g., 300 = 3.00%)
     uint256 public platformFeePercentage;
+
     uint256 public accumulatedFees;
     uint256 public minBetAmount;
     uint256 public maxBetAmount;
@@ -25,13 +29,13 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
     uint256[] private allMatchIds;
 
     // ============ Constants ============
-    uint256 private constant BASIS_POINTS = 10000;
-    uint256 private constant MAX_FEE_PERCENTAGE = 200;
+    uint256 private constant BASIS_POINTS = 10_000;            // 100.00%
+    uint256 public constant MAX_FEE_PERCENTAGE = 1_000;        // 10.00% max (inclusive)
 
     // ============ Constructor ============
     constructor(
         address _admin,
-        uint256 _platformFeePercentage,
+        uint256 _platformFeePercentage, // in BPS
         uint256 _minBetAmount,
         uint256 _maxBetAmount
     ) OZAccess.Ownable(msg.sender) {
@@ -44,6 +48,10 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         minBetAmount = _minBetAmount;
         maxBetAmount = _maxBetAmount;
     }
+
+    // ============ Receive ============
+    // Optional: accept direct ETH sends (not used for matches, but harmless)
+    receive() external payable {}
 
     // ============ Internal Access Checks ============
     function _onlyAdmin() internal view {
@@ -70,6 +78,7 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         external
         payable
         nonReentrant
+        override
         returns (uint256 matchId)
     {
         if (msg.value < minBetAmount || msg.value > maxBetAmount) revert InvalidBetAmount();
@@ -99,9 +108,11 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         external
         payable
         nonReentrant
+        override
     {
-        MatchData storage matchData = matches[matchId];
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
+        MatchData storage matchData = matches[matchId];
+
         if (matchData.status != MatchStatus.Pending) revert MatchNotPending();
         if (msg.value != matchData.amount) revert InvalidBetAmount();
         if (msg.sender == matchData.player1) revert PlayerAlreadyInMatch();
@@ -111,6 +122,7 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         matchData.player2 = msg.sender;
         matchData.token2 = tokenSelected;
         matchData.status = MatchStatus.Active;
+
         userMatches[msg.sender].push(matchId);
 
         emit MatchJoined(matchId, msg.sender, tokenSelected, block.timestamp);
@@ -121,9 +133,11 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         external
         onlyAdmin
         nonReentrant
+        override
     {
-        MatchData storage matchData = matches[matchId];
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
+        MatchData storage matchData = matches[matchId];
+
         if (matchData.status != MatchStatus.Active) revert MatchNotActive();
         if (winner != matchData.player1 && winner != matchData.player2) revert InvalidAddress();
 
@@ -145,9 +159,11 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         external
         onlyOwnerOrAdmin
         nonReentrant
+        override
     {
-        MatchData storage matchData = matches[matchId];
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
+        MatchData storage matchData = matches[matchId];
+
         if (
             matchData.status != MatchStatus.Pending &&
             matchData.status != MatchStatus.Active
@@ -171,21 +187,22 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
     }
 
     // ============ Admin Functions ============
-    function setAdmin(address newAdmin) external onlyOwner {
+    function setAdmin(address newAdmin) external onlyOwner override {
         if (newAdmin == address(0)) revert InvalidAddress();
         address oldAdmin = admin;
         admin = newAdmin;
         emit AdminUpdated(oldAdmin, newAdmin);
     }
 
-    function setPlatformFee(uint256 newFeePercentage) external onlyOwner {
+    /// @notice Set platform fee in BPS (max is inclusive)
+    function setPlatformFee(uint256 newFeePercentage) external onlyOwner override {
         if (newFeePercentage > MAX_FEE_PERCENTAGE) revert InvalidFeePercentage();
         uint256 oldFee = platformFeePercentage;
         platformFeePercentage = newFeePercentage;
         emit PlatformFeeUpdated(oldFee, newFeePercentage);
     }
 
-    function withdrawFees(address payable to) external onlyOwner nonReentrant {
+    function withdrawFees(address payable to) external onlyOwner nonReentrant override {
         if (to == address(0)) revert InvalidAddress();
         uint256 amount = accumulatedFees;
         if (amount == 0) revert NoFeesToWithdraw();
@@ -208,12 +225,12 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
     }
 
     // ============ View Functions ============
-    function getMatch(uint256 matchId) external view returns (MatchData memory) {
+    function getMatch(uint256 matchId) external view override returns (MatchData memory) {
         if (matchId == 0 || matchId > matchCounter) revert InvalidMatchId();
         return matches[matchId];
     }
 
-    function getActiveMatches() external view returns (uint256[] memory) {
+    function getActiveMatches() external view override returns (uint256[] memory) {
         uint256 activeCount;
         for (uint256 i; i < allMatchIds.length; i++) {
             if (matches[allMatchIds[i]].status == MatchStatus.Active) activeCount++;
@@ -229,7 +246,7 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         return activeMatches;
     }
 
-    function getPendingMatches() external view returns (uint256[] memory) {
+    function getPendingMatches() external view override returns (uint256[] memory) {
         uint256 pendingCount;
         for (uint256 i; i < allMatchIds.length; i++) {
             if (matches[allMatchIds[i]].status == MatchStatus.Pending) pendingCount++;
@@ -245,10 +262,11 @@ contract PairPong is IPP.IPairPong, OZOwnership.Ownable2Step, OZUtils.Reentrancy
         return pendingMatches;
     }
 
-    function getUserMatches(address user) external view returns (uint256[] memory) {
+    function getUserMatches(address user) external view override returns (uint256[] memory) {
         return userMatches[user];
     }
 
+    // --------- Extra helpers (optional) ---------
     function getTotalMatches() external view returns (uint256) {
         return matchCounter;
     }
