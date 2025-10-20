@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol" as ForgeTest;
 import "../src/PairPong.sol" as PP;
 import "./mocks/MockERC20.sol" as Mock;
+import "../src/interfaces/IPairPong.sol" as IPairPong;
 
 /**
  * @title PairPongTest
@@ -114,11 +115,10 @@ contract PairPongTest is ForgeTest.Test {
      * @param amount Bet amount
      * @return matchId ID of created match
      */
-    function createMatch(
-        address creator,
-        address token,
-        uint256 amount
-    ) internal returns (uint256 matchId) {
+    function createMatch(address creator, address token, uint256 amount)
+        internal
+        returns (uint256 matchId)
+    {
         vm.prank(creator);
         matchId = pairPong.createMatch{value: amount}(token);
     }
@@ -130,12 +130,7 @@ contract PairPongTest is ForgeTest.Test {
      * @param token Token address to bet on
      * @param amount Bet amount
      */
-    function joinMatch(
-        address joiner,
-        uint256 matchId,
-        address token,
-        uint256 amount
-    ) internal {
+    function joinMatch(address joiner, uint256 matchId, address token, uint256 amount) internal {
         vm.prank(joiner);
         pairPong.joinMatch{value: amount}(matchId, token);
     }
@@ -173,9 +168,7 @@ contract PairPongTest is ForgeTest.Test {
      * @param totalPool Total pool amount
      * @return fee Expected platform fee
      */
-    function calculatePlatformFee(
-        uint256 totalPool
-    ) internal view returns (uint256 fee) {
+    function calculatePlatformFee(uint256 totalPool) internal view returns (uint256 fee) {
         fee = (totalPool * pairPong.platformFeePercentage()) / 10000;
     }
 
@@ -184,9 +177,7 @@ contract PairPongTest is ForgeTest.Test {
      * @param totalPool Total pool amount
      * @return payout Expected winner payout
      */
-    function calculateWinnerPayout(
-        uint256 totalPool
-    ) internal view returns (uint256 payout) {
+    function calculateWinnerPayout(uint256 totalPool) internal view returns (uint256 payout) {
         uint256 fee = calculatePlatformFee(totalPool);
         payout = totalPool - fee;
     }
@@ -202,11 +193,11 @@ contract PairPongIntegrationTest is PairPongTest {
         uint256 matchId = createMatch(player1, address(token1), DEFAULT_BET);
 
         // Verify match created
-        PP.MatchData memory matchData = pairPong.getMatch(matchId);
+        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.player1, player1);
         assertEq(matchData.token1, address(token1));
         assertEq(matchData.amount, DEFAULT_BET);
-        assertEq(uint8(matchData.status), uint8(PP.MatchStatus.Pending));
+        assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Pending));
 
         // Join match
         joinMatch(player2, matchId, address(token2), DEFAULT_BET);
@@ -215,7 +206,7 @@ contract PairPongIntegrationTest is PairPongTest {
         matchData = pairPong.getMatch(matchId);
         assertEq(matchData.player2, player2);
         assertEq(matchData.token2, address(token2));
-        assertEq(uint8(matchData.status), uint8(PP.MatchStatus.Active));
+        assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Active));
 
         // Record balances before finalization
         uint256 player1BalanceBefore = player1.balance;
@@ -227,7 +218,7 @@ contract PairPongIntegrationTest is PairPongTest {
         // Verify match finalized
         matchData = pairPong.getMatch(matchId);
         assertEq(matchData.winner, player1);
-        assertEq(uint8(matchData.status), uint8(PP.MatchStatus.Completed));
+        assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Completed));
 
         // Verify payouts
         uint256 totalPool = DEFAULT_BET * 2;
@@ -236,10 +227,7 @@ contract PairPongIntegrationTest is PairPongTest {
 
         assertEq(player1.balance, player1BalanceBefore + expectedPayout);
         assertEq(pairPong.accumulatedFees(), expectedFee);
-        assertEq(
-            address(pairPong).balance,
-            contractBalanceBefore - expectedPayout
-        );
+        assertEq(address(pairPong).balance, contractBalanceBefore - expectedPayout);
     }
 
     function test_MultipleMatches() public {
