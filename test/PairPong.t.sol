@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/Test.sol";
-import "../src/PairPong.sol";
-import "./mocks/MockERC20.sol";
+import "forge-std/Test.sol" as ForgeTest;
+import "../src/PairPong.sol" as PP;
+import "./mocks/MockERC20.sol" as Mock;
 
 /**
  * @title PairPongTest
  * @notice Base test contract with common setup and helper functions
  * @dev Extended by specific test contracts
  */
-contract PairPongTest is Test {
+contract PairPongTest is ForgeTest.Test {
     // ============ Contracts ============
-    PairPong public pairPong;
-    MockERC20 public token1;
-    MockERC20 public token2;
-    MockERC20 public token3;
+    PP.PairPong public pairPong;
+    Mock.MockERC20 public token1;
+    Mock.MockERC20 public token2;
+    Mock.MockERC20 public token3;
 
     // ============ Test Accounts ============
     address public owner;
@@ -86,12 +86,12 @@ contract PairPongTest is Test {
 
         // Deploy contract as owner
         vm.prank(owner);
-        pairPong = new PairPong(admin, PLATFORM_FEE, MIN_BET, MAX_BET);
+        pairPong = new PP.PairPong(admin, PLATFORM_FEE, MIN_BET, MAX_BET);
 
         // Deploy mock tokens
-        token1 = new MockERC20("Token1", "TK1", 18);
-        token2 = new MockERC20("Token2", "TK2", 18);
-        token3 = new MockERC20("Token3", "TK3", 18);
+        token1 = new Mock.MockERC20("Token1", "TK1", 18);
+        token2 = new Mock.MockERC20("Token2", "TK2", 18);
+        token3 = new Mock.MockERC20("Token3", "TK3", 18);
 
         // Label addresses for better trace output
         vm.label(address(pairPong), "PairPong");
@@ -114,10 +114,11 @@ contract PairPongTest is Test {
      * @param amount Bet amount
      * @return matchId ID of created match
      */
-    function createMatch(address creator, address token, uint256 amount)
-        internal
-        returns (uint256 matchId)
-    {
+    function createMatch(
+        address creator,
+        address token,
+        uint256 amount
+    ) internal returns (uint256 matchId) {
         vm.prank(creator);
         matchId = pairPong.createMatch{value: amount}(token);
     }
@@ -129,7 +130,12 @@ contract PairPongTest is Test {
      * @param token Token address to bet on
      * @param amount Bet amount
      */
-    function joinMatch(address joiner, uint256 matchId, address token, uint256 amount) internal {
+    function joinMatch(
+        address joiner,
+        uint256 matchId,
+        address token,
+        uint256 amount
+    ) internal {
         vm.prank(joiner);
         pairPong.joinMatch{value: amount}(matchId, token);
     }
@@ -167,7 +173,9 @@ contract PairPongTest is Test {
      * @param totalPool Total pool amount
      * @return fee Expected platform fee
      */
-    function calculatePlatformFee(uint256 totalPool) internal view returns (uint256 fee) {
+    function calculatePlatformFee(
+        uint256 totalPool
+    ) internal view returns (uint256 fee) {
         fee = (totalPool * pairPong.platformFeePercentage()) / 10000;
     }
 
@@ -176,7 +184,9 @@ contract PairPongTest is Test {
      * @param totalPool Total pool amount
      * @return payout Expected winner payout
      */
-    function calculateWinnerPayout(uint256 totalPool) internal view returns (uint256 payout) {
+    function calculateWinnerPayout(
+        uint256 totalPool
+    ) internal view returns (uint256 payout) {
         uint256 fee = calculatePlatformFee(totalPool);
         payout = totalPool - fee;
     }
@@ -192,11 +202,11 @@ contract PairPongIntegrationTest is PairPongTest {
         uint256 matchId = createMatch(player1, address(token1), DEFAULT_BET);
 
         // Verify match created
-        IPairPong.MatchData memory matchData = pairPong.getMatch(matchId);
+        PP.MatchData memory matchData = pairPong.getMatch(matchId);
         assertEq(matchData.player1, player1);
         assertEq(matchData.token1, address(token1));
         assertEq(matchData.amount, DEFAULT_BET);
-        assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Pending));
+        assertEq(uint8(matchData.status), uint8(PP.MatchStatus.Pending));
 
         // Join match
         joinMatch(player2, matchId, address(token2), DEFAULT_BET);
@@ -205,7 +215,7 @@ contract PairPongIntegrationTest is PairPongTest {
         matchData = pairPong.getMatch(matchId);
         assertEq(matchData.player2, player2);
         assertEq(matchData.token2, address(token2));
-        assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Active));
+        assertEq(uint8(matchData.status), uint8(PP.MatchStatus.Active));
 
         // Record balances before finalization
         uint256 player1BalanceBefore = player1.balance;
@@ -217,7 +227,7 @@ contract PairPongIntegrationTest is PairPongTest {
         // Verify match finalized
         matchData = pairPong.getMatch(matchId);
         assertEq(matchData.winner, player1);
-        assertEq(uint8(matchData.status), uint8(IPairPong.MatchStatus.Completed));
+        assertEq(uint8(matchData.status), uint8(PP.MatchStatus.Completed));
 
         // Verify payouts
         uint256 totalPool = DEFAULT_BET * 2;
@@ -226,7 +236,10 @@ contract PairPongIntegrationTest is PairPongTest {
 
         assertEq(player1.balance, player1BalanceBefore + expectedPayout);
         assertEq(pairPong.accumulatedFees(), expectedFee);
-        assertEq(address(pairPong).balance, contractBalanceBefore - expectedPayout);
+        assertEq(
+            address(pairPong).balance,
+            contractBalanceBefore - expectedPayout
+        );
     }
 
     function test_MultipleMatches() public {
