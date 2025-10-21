@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/src/Script.sol";
+import "forge-std/Script.sol";
 import "../src/PairPong.sol";
 
 /**
@@ -120,7 +120,7 @@ contract DeployPairPongTestnet is Script {
     function run() external returns (PairPong) {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        address admin = vm.envOr("ADMIN_ADDRESS", deployer);
+        address admin = vm.envAddress("ADMIN_ADDRESS");
 
         console.log("========================================");
         console.log("Deploying PairPong (TESTNET)");
