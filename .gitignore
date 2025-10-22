@@ -55,3 +55,7 @@ deployments/local/
 # Test artifacts
 test-results/
 test-report.xml
+
+_.api
+config.toml
+secrets.toml
