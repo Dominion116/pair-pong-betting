@@ -9,6 +9,9 @@ out/
 
 # Dotenv file
 .env
+.env.backup
+
+chianlink/
 
 # Node modules
 node_modules/

@@ -120,7 +120,7 @@ contract DeployPairPongTestnet is Script {
     function run() external returns (PairPong) {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        address admin = vm.envOr("ADMIN_ADDRESS", deployer);
+        address admin = vm.envAddress("ADMIN_ADDRESS");
 
         console.log("========================================");
         console.log("Deploying PairPong (TESTNET)");

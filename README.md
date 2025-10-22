@@ -1,34 +1,53 @@
-# Pair Pong Betting Smart Contract
+# Pair Pong Betting Smart Contract - Complete System
 
-A decentralized 1v1 betting platform where users stake ETH and select crypto tokens. The frontend determines winners based on token performance, and the smart contract handles secure fund management and payouts.
+A decentralized betting platform with integrated insurance mechanisms where users stake ETH, select crypto tokens, and have the option to insure their wagers. The frontend determines winners based on token performance, while smart contracts handle secure fund management, peer-to-peer bet matching, insurance claims, and payouts.
 
 ## 🎯 Features
 
-- **1v1 Betting**: Create and join matches with ETH stakes
+- **Betting**: Create and join matches with ETH stakes
 - **Token Selection**: Each player selects a different crypto token
-- **Secure Settlements**: Admin-controlled match finalization with winner verification
+- **Peer-to-Peer Matching**: Automatic bet matching with flexible 1-to-N scenarios
+- **House Backup**: Fallback matching against vault if no peer match found
+- **Insurance Coverage**: Optional tiered insurance (Gold, Silver, Bronze) for loss protection
+- **Secure Settlements**: Oracle-verified match finalization with winner verification
 - **Platform Fees**: Configurable fee system (default 2%)
-- **Access Control**: Owner and admin role management
-- **Match Management**: View active, pending, and user-specific matches
+- **Access Control**: Owner, admin, and oracle role management
+- **Match Management**: View active, pending, completed, and user-specific matches
 - **Refund System**: Cancel matches and refund participants
+- **Liquidity Management**: Vault replenishment and reserve monitoring
 
 ## 📁 Project Structure
 
 ```
 pair-pong-betting/
 ├── src/
-│   ├── PairPong.sol              # Main betting contract
+│   ├── PairPong.sol                 # Main 1v1 betting contract
+│   ├── BettingPool.sol              # Peer-to-peer bet matching engine
+│   ├── InsureBets.sol               # Insurance contract for bet protection
+│   ├── Vault.sol                    # House liquidity management
 │   └── interfaces/
-│       └── IPairPong.sol         # Contract interface
+│       ├── IPairPong.sol            # PairPong interface
+│       ├── IPool.sol                # BettingPool interface
+│       ├── IInsureBet.sol           # InsureBets interface
+│       └── IVault.sol               # Vault interface
 ├── test/
-│   ├── PairPong.t.sol            # Base tests
-│   ├── PairPongAccessControl.t.sol
-│   ├── PairPongBetting.t.sol
+│   ├── PairPong.t.sol               # Base integration tests
+│   ├── PairPongAccessControl.t.sol  # Access control tests
+│   ├── PairPongBetting.t.sol        # Betting logic tests
+│   ├── BettingPool.t.sol            # BettingPool matching tests
+│   ├── InsureBets.t.sol             # Insurance claim tests
+│   ├── Vault.t.sol                  # Liquidity management tests
 │   └── mocks/
-│       └── MockERC20.sol         # Mock token for testing
+│       └── MockERC20.sol            # Mock token for testing
+│       └── MockOracle.sol           # Mock oracle for testing
+├── utilsl/
+├   ├── Oracle.sol                   # Oracle contract for off chain data integration
 ├── script/
-│   └── DeployPairPong.s.sol      # Deployment scripts
-└── foundry.toml                   # Foundry configuration
+│   ├── DeployPairPong.s.sol         # Main contract deployment
+│   ├── DeployBettingPool.s.sol      # BettingPool deployment
+│   ├── DeployInsureBets.s.sol       # InsureBets deployment
+│   └── DeployVault.s.sol            # Vault deployment
+└── foundry.toml                     # Foundry configuration
 ```
 
 ## 🚀 Getting Started
@@ -62,7 +81,7 @@ forge test
 forge test -vvv
 
 # Run specific test file
-forge test --match-path test/PairPongBetting.t.sol
+forge test --match-path test/BettingPool.t.sol
 
 # Run with gas reporting
 forge test --gas-report
@@ -70,28 +89,41 @@ forge test --gas-report
 
 ## 📝 Contract Usage
 
-### Creating a Match
+### Creating a Match (PairPong)
 
 ```solidity
 // User stakes 0.1 ETH and selects WETH token
 uint256 matchId = pairPong.createMatch{value: 0.1 ether}(WETH_ADDRESS);
 ```
 
-### Joining a Match
+### Placing a Bet with Optional Insurance (BettingPool)
+
+```solidity
+// User places 0.1 ETH bet on Player A with Gold tier insurance
+// Gold tier: 10% premium, 50% loss payout
+uint256 betId = bettingPool.placeBet{value: 0.1 ether}(
+    matchId,
+    SIDE_PLAYER_A,
+    InsureBets.InsuranceTier.Gold
+);
+```
+
+### Joining a Match (PairPong)
 
 ```solidity
 // Another user joins with same stake amount and selects USDC token
 pairPong.joinMatch{value: 0.1 ether}(matchId, USDC_ADDRESS);
 ```
 
-### Finalizing a Match (Admin Only)
+### Settling a Match with Insurance Processing (Oracle)
 
 ```solidity
-// Admin determines winner off-chain and settles the match
+// Oracle verifies winner and triggers settlement
+// This automatically processes insurance claims for losing insured bets
 pairPong.finalizeMatch(matchId, winnerAddress);
 ```
 
-### Viewing Matches
+### Viewing Matches and Bets
 
 ```solidity
 // Get match details
@@ -102,7 +134,133 @@ uint256[] memory pending = pairPong.getPendingMatches();
 
 // Get user's matches
 uint256[] memory userMatches = pairPong.getUserMatches(userAddress);
+
+// Get active bets in pool
+IPool.Bet[] memory userBets = bettingPool.getUserBets(userAddress);
+
+// Get insurance details
+IInsureBet.InsuranceInfo memory info = insureBets.getInsuranceInfo(betId);
 ```
+
+## 🎯 System Architecture
+
+### BettingPool - Bet Matching Engine
+
+The BettingPool contract implements a flexible peer-to-peer matching algorithm:
+
+- **1-to-1 Matching**: Direct peer matches lock funds together
+- **1-to-N Matching**: Supports ratios like 1-to-2, 1-to-5, 1-to-10
+- **House Fallback**: Unmatched portions default to vault counterparty
+- **Insurance Integration**: Tracks insured bets separately for claim processing
+- **Liquidity Management**: Integrates with Vault for reserve availability
+
+Match flow: User places bet → System searches for counterparties → If found, pair immediately → If not, add to queue and match against house → Lock funds until settlement.
+
+### InsureBets - Insurance Layer
+
+Provides optional risk mitigation for users:
+
+- **Tiered Premiums**: Gold (10%), Silver (5%), Bronze (2.5%)
+- **Loss Payouts**: Gold (50%), Silver (25%), Bronze (12.5%)
+- **Upfront Payment**: Premium collected during bet placement
+- **Claim Processing**: Automatic upon loss verification
+- **Reserve Management**: Maintains separate insurance pool
+
+Insurance economics: Premiums accumulate in insurance pool → Claims disbursed on verified losses → Surplus grows if loss rate < premium collection rate.
+
+### Vault - Liquidity Management
+
+Manages house liquidity and fallback matching:
+
+- **Reserve Tracking**: Monitor vault balance
+- **Payout Distribution**: Fund house-matched bet payouts
+- **Replenishment Triggers**: Alert when reserves drop below threshold
+- **Emergency Pause**: Halt new house matches if reserves insufficient
+
+## 📊 Contract Details
+
+### Constructor Parameters
+
+**PairPong:**
+- `admin`: Address authorized to finalize and cancel matches
+- `platformFeePercentage`: Fee in basis points (200 = 2%)
+- `minBetAmount`: Minimum bet in wei (0.01 ETH)
+- `maxBetAmount`: Maximum bet in wei (10 ETH)
+
+**BettingPool:**
+- `vaultAddress`: Address of Vault contract
+- `oracleAddress`: Authorized oracle for match verification
+- `platformFeePercentage`: Fee in basis points
+
+**InsureBets:**
+- `bettingPoolAddress`: Address of BettingPool contract
+- `premiumPercentages`: Array of percentages for each tier
+- `payoutPercentages`: Array of payouts for each tier
+
+### Insurance Tiers
+
+```solidity
+enum InsuranceTier {
+    None,    // No insurance
+    Bronze,  // 3% premium, 15% payout
+    Silver,  // 6% premium, 30% payout
+    Gold     // 10% premium, 50% payout
+}
+```
+
+### Match and Bet States
+
+```solidity
+enum MatchStatus {
+    Pending,    // Waiting for player2
+    Active,     // Both players joined
+    Completed,  // Winner paid
+    Canceled    // Refunds processed
+}
+
+enum BetStatus {
+    Pending,    // Waiting for settlement
+    Matched,    // Paired with counterparty
+    Won,        // Winner paid
+    Lost,       // Settled, insured users get claim
+    Refunded    // Match canceled
+}
+```
+
+### Platform Fee Calculation
+
+The platform fee is calculated in basis points:
+- 100 basis points = 1%
+- 200 basis points = 2% (default)
+- 1000 basis points = 10% (maximum)
+
+Example with 2% fee on a 1 ETH pool:
+```
+Total Pool: 1 ETH
+Platform Fee: 0.02 ETH (2%)
+Winner Payout: 0.98 ETH
+```
+
+Example with Gold insurance on 0.1 ETH bet:
+```
+Bet Amount: 0.1 ETH
+Gold Premium (10%): 0.01 ETH
+Insured Bet Amount: 0.09 ETH
+Loss Payout (50%): 0.045 ETH (from insurance pool)
+```
+
+## 🔒 Security Features
+
+- **ReentrancyGuard**: Protects against reentrancy attacks on all contracts
+- **Access Control**: Owner, admin, and oracle role separation
+- **Oracle Verification**: Match results verified before settlement
+- **Insurance Pool Validation**: Claims processed only for verified losses
+- **Input Validation**: Comprehensive checks on all parameters
+- **Double-Betting Prevention**: Users cannot bet both sides of same match
+- **Time Locks**: Bets blocked after match start time
+- **Checks-Effects-Interactions**: Safe transfer pattern throughout
+- **Event Logging**: Complete audit trail for all state changes
+- **Emergency Pause**: Owner can halt operations during anomalies
 
 ## 🚢 Deployment
 
@@ -113,8 +271,20 @@ uint256[] memory userMatches = pairPong.getUserMatches(userAddress);
 anvil
 ```
 
-2. Deploy the contract:
+2. Deploy all contracts:
 ```bash
+forge script script/DeployVault.s.sol:DeployVaultLocal \
+  --rpc-url http://localhost:8545 \
+  --broadcast
+
+forge script script/DeployBettingPool.s.sol:DeployBettingPoolLocal \
+  --rpc-url http://localhost:8545 \
+  --broadcast
+
+forge script script/DeployInsureBets.s.sol:DeployInsureBetsLocal \
+  --rpc-url http://localhost:8545 \
+  --broadcast
+
 forge script script/DeployPairPong.s.sol:DeployPairPongLocal \
   --rpc-url http://localhost:8545 \
   --broadcast
@@ -126,6 +296,7 @@ forge script script/DeployPairPong.s.sol:DeployPairPongLocal \
 ```bash
 PRIVATE_KEY=your_private_key
 ADMIN_ADDRESS=admin_wallet_address
+ORACLE_ADDRESS=oracle_wallet_address
 SEPOLIA_RPC_URL=your_sepolia_rpc_url
 ETHERSCAN_API_KEY=your_etherscan_api_key
 ```
@@ -156,166 +327,163 @@ forge script script/DeployPairPong.s.sol \
 forge test
 ```
 
-### Run Specific Test Files
+### Run Specific Test Suites
 
 ```bash
-# Base integration tests
+# Main contract tests
 forge test --match-path test/PairPong.t.sol
+
+# Bet matching engine tests
+forge test --match-path test/BettingPool.t.sol
+
+# Insurance tests
+forge test --match-path test/InsureBets.t.sol
 
 # Access control tests
 forge test --match-path test/PairPongAccessControl.t.sol
 
 # Betting logic tests
 forge test --match-path test/PairPongBetting.t.sol
+
+# Vault tests
+forge test --match-path test/Vault.t.sol
 ```
 
 ### Run Specific Test Functions
 
 ```bash
-# Run tests matching a pattern
-forge test --match-test test_CreateMatch
+# Bet matching tests
+forge test --match-test test_PeerToPeerMatching -vvv
 
-# Run with verbosity
+# Insurance claim tests
+forge test --match-test test_InsuranceClaimProcessing -vvv
+
+# Settlement tests
 forge test --match-test test_CompleteMatchFlow -vvv
 ```
 
-### Generate Gas Report
+### Generate Reports
 
 ```bash
+# Gas report
 forge test --gas-report
-```
 
-### Generate Coverage Report
-
-```bash
+# Coverage report
 forge coverage
+
+# Coverage for specific file
+forge coverage --match-path src/BettingPool.sol
 ```
 
 ### Test with Fork
 
 ```bash
-# Test against a forked mainnet
+# Test against forked mainnet
 forge test --fork-url $MAINNET_RPC_URL
 
 # Test specific block
 forge test --fork-url $MAINNET_RPC_URL --fork-block-number 18000000
 ```
 
-## 📊 Contract Details
+## 📈 Test Coverage
 
-### Constructor Parameters
+The comprehensive test suite includes:
 
-- `admin`: Address authorized to finalize and cancel matches
-- `platformFeePercentage`: Fee in basis points (200 = 2%)
-- `minBetAmount`: Minimum bet in wei (0.01 ETH)
-- `maxBetAmount`: Maximum bet in wei (10 ETH)
+**PairPong Tests:**
+- ✅ Match creation with various bet amounts
+- ✅ Match joining with validation
+- ✅ Match settlement with fee calculation
+- ✅ Match cancellation and refunds
 
-### Platform Fee
+**BettingPool Tests:**
+- ✅ Peer-to-peer bet matching (1-to-1)
+- ✅ Multi-opponent matching (1-to-N)
+- ✅ House fallback matching
+- ✅ Unmatched bet queue management
+- ✅ Insurance-aware matching
+- ✅ Settlement and payout distribution
 
-The platform fee is calculated in basis points:
-- 100 basis points = 1%
-- 200 basis points = 2% (default)
-- 1000 basis points = 10% (maximum)
+**InsureBets Tests:**
+- ✅ Insurance tier selection and premium calculation
+- ✅ Claim eligibility verification
+- ✅ Loss payout distribution
+- ✅ Insurance pool reserve tracking
+- ✅ Retroactive insurance prevention
 
-Example: With a 2% fee on a 1 ETH pool:
-```
-Total Pool: 1 ETH
-Platform Fee: 0.02 ETH (2%)
-Winner Payout: 0.98 ETH
-```
-
-### Match States
-
-```solidity
-enum MatchStatus {
-    Pending,    // Waiting for player2
-    Active,     // Both players joined
-    Completed,  // Winner paid
-    Canceled    // Refunds processed
-}
-```
-
-## 🔒 Security Features
-
-- **ReentrancyGuard**: Protects against reentrancy attacks
-- **Access Control**: Owner and admin role separation
-- **Input Validation**: Comprehensive checks on all parameters
-- **Checks-Effects-Interactions**: Safe transfer pattern
-- **Event Logging**: Complete audit trail
+**Integration Tests:**
+- ✅ Complete flow with insurance
+- ✅ Multiple concurrent matches
+- ✅ Access control for admin/oracle functions
+- ✅ Owner parameter management
+- ✅ Reentrancy protection
+- ✅ Gas optimization
+- ✅ Edge cases and error conditions
+- ✅ Fuzz testing
 
 ## 🎮 Usage Example
 
-### Frontend Integration
+### Complete Betting Flow with Insurance
 
 ```javascript
 import { ethers } from 'ethers';
 
-// Connect to contract
-const pairPong = new ethers.Contract(ADDRESS, ABI, signer);
+// Connect to contracts
+const pairPong = new ethers.Contract(PAIR_PONG_ADDRESS, PAIR_PONG_ABI, signer);
+const bettingPool = new ethers.Contract(BETTING_POOL_ADDRESS, POOL_ABI, signer);
+const insureBets = new ethers.Contract(INSURE_BETS_ADDRESS, INSURANCE_ABI, signer);
 
-// Create match
+// User 1: Create match
 const tx1 = await pairPong.createMatch(WETH_ADDRESS, {
   value: ethers.parseEther("0.1")
 });
-await tx1.wait();
+const receipt1 = await tx1.wait();
+const matchId = receipt1.events[0].args.matchId;
 
-// Join match
+// User 2: Join match
 const tx2 = await pairPong.joinMatch(matchId, USDC_ADDRESS, {
   value: ethers.parseEther("0.1")
 });
 await tx2.wait();
 
-// Admin finalizes match
-const tx3 = await pairPong.finalizeMatch(matchId, winnerAddress);
-await tx3.wait();
+// User 1: Place insured bet in pool (Gold tier = 10% premium, 50% payout)
+const tx3 = await bettingPool.placeBet(matchId, SIDE_PLAYER_A, 2, { // 2 = Gold tier
+  value: ethers.parseEther("0.1")
+});
+const receipt3 = await tx3.wait();
+const betId = receipt3.events[0].args.betId;
+
+// Check insurance details
+const insurance = await insureBets.getInsuranceInfo(betId);
+console.log("Premium Paid:", insurance.premiumPaid);
+console.log("Payout Percentage:", insurance.payoutPercentage);
+
+// Oracle: Finalize match with winner
+const tx4 = await pairPong.finalizeMatch(matchId, userAddress1);
+await tx4.wait();
+
+// Check if insurance claim was processed
+const claimStatus = await insureBets.getClaimStatus(betId);
+console.log("Claim Processed:", claimStatus.processed);
+console.log("Claim Amount:", claimStatus.amount);
 ```
 
-### Query Matches
+### Query System State
 
 ```javascript
-// Get match details
-const match = await pairPong.getMatch(matchId);
-
-// Get pending matches
+// Get all pending matches
 const pending = await pairPong.getPendingMatches();
 
-// Get active matches
-const active = await pairPong.getActiveMatches();
-
-// Get user's matches
+// Get user's active matches
 const userMatches = await pairPong.getUserMatches(userAddress);
-```
 
-## 📈 Test Coverage
+// Get vault balance
+const vaultBalance = await vault.getBalance();
 
-The test suite includes:
+// Get insurance pool reserves
+const insuranceReserves = await insureBets.getReserves();
 
-- ✅ Match creation with various bet amounts
-- ✅ Match joining with validation
-- ✅ Match settlement with fee calculation
-- ✅ Match cancellation and refunds
-- ✅ Access control for admin functions
-- ✅ Owner functions (fees, parameters)
-- ✅ Edge cases and error conditions
-- ✅ Reentrancy protection
-- ✅ Gas optimization tests
-- ✅ Fuzz testing
-
-### Test Results
-
-Run `forge test` to see results:
-
-```bash
-[⠢] Compiling...
-[⠆] Compiling 1 files with 0.8.20
-[⠰] Solc 0.8.20 finished in 2.5s
-Compiler run successful!
-
-Running 50+ tests for test/PairPong.t.sol:PairPongTest
-[PASS] test_CompleteMatchFlow() (gas: 245678)
-[PASS] test_MultipleMatches() (gas: 398765)
-...
-Test result: ok. 50 passed; 0 failed; finished in 5.2s
+// Get unmatched bets in queue
+const unmatchedBets = await bettingPool.getUnmatchedBets(SIDE_PLAYER_A);
 ```
 
 ## 🛠 Development
@@ -336,7 +504,7 @@ forge build
 
 ```bash
 forge fmt
-```
+``` 
 
 ### Clean Build Artifacts
 
@@ -348,8 +516,17 @@ forge clean
 
 After deployment, update these addresses:
 
-- **Sepolia Testnet**: `0x...`
-- **Ethereum Mainnet**: `0x...`
+- **Sepolia Testnet**:
+  - PairPong: `0x...`
+  - BettingPool: `0x...`
+  - InsureBets: `0x...`
+  - Vault: `0x...`
+
+- **Ethereum Mainnet**:
+  - PairPong: `0x...`
+  - BettingPool: `0x...`
+  - InsureBets: `0x...`
+  - Vault: `0x...`
 
 ## 🤝 Contributing
 
