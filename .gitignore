@@ -10,9 +10,11 @@ out/
 # Dotenv file
 .env
 .env.backup
-
-chianlink/
-
+file
+.chianlink_sepolia/
+.api
+config.toml
+secrets.tomly
 # Node modules
 node_modules/
 
@@ -55,3 +57,7 @@ deployments/local/
 # Test artifacts
 test-results/
 test-report.xml
+
+_.api
+config.toml
+secrets.toml

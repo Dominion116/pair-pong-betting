@@ -22,8 +22,8 @@ contract VaultTest is Test {
         // Deposit 3 ETH
         vault.deposit{value: 3 ether}();
 
-        uint256 after = vault.getBalance();
-        assertEq(after, 3 ether);
+        uint256 afterBalance = vault.getBalance();
+        assertEq(afterBalance, 3 ether);
     }
 
     function test_setBettingPool_onlyOwner() public {
