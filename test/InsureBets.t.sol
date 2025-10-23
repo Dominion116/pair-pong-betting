@@ -49,7 +49,7 @@ contract InsureBetsTest is Test {
 
     assertTrue(payout <= insuredAmount);
     assertTrue(payout <= 3 ether);
-    assertEq(insure.getReserves(), 3 ether - payout);
+    assertEq(insure.getReserves(), 3 ether - payout - premiumPaid);
 }
 
 }
