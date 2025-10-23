@@ -26,29 +26,30 @@ contract InsureBetsTest is Test {
     }
 
     function test_register_and_processClaim_flow() public {
-        // Prepare dummy insurance registration args
-        uint256 betId = 7;
-        address user = address(0xBEEF);
-        uint256 matchId = 11;
-        uint256 insuredAmount = 1 ether;
-        uint256 premiumPaid = (insuredAmount * 300) / 10000; // sample 3% premium (bronze)
-        uint8 tier = uint8(IInsureBet.InsuranceTier.Bronze);
+    uint256 betId = 7;
+    address user = address(0xBEEF);
+    uint256 matchId = 11;
+    uint256 insuredAmount = 1 ether;
 
-        // Ensure reserves available
-        insure.replenishReserves{value: 3 ether}();
-        assertEq(insure.getReserves(), 3 ether);
+    // If Bronze = 3% in your contract logic
+    uint256 premiumPaid = (insuredAmount * 300) / 10000;
 
-        // Call registerInsurance (allowed because this contract was set as bettingPool during deploy)
-        insure.registerInsurance(betId, user, matchId, insuredAmount, premiumPaid, tier);
+    // ✅ Use the enum type, not uint8
+    IInsureBet.InsuranceTier tier = IInsureBet.InsuranceTier.Bronze;
 
-        // processClaim should be callable by betting pool (this contract)
-        uint256 payout = insure.processClaim(betId);
+    // Ensure reserves available
+    insure.replenishReserves{value: 3 ether}();
+    assertEq(insure.getReserves(), 3 ether);
 
-        // payout should be <= insuredAmount and <= reserves
-        assertTrue(payout <= insuredAmount);
-        assertTrue(payout <= 3 ether);
+    // If registerInsurance requires msg.value == premium, add {value: premiumPaid}
+    // insure.registerInsurance{value: premiumPaid}(betId, user, matchId, insuredAmount, premiumPaid, tier);
+    insure.registerInsurance(betId, user, matchId, insuredAmount, premiumPaid, tier);
 
-        // reserves should be reduced by payout
-        assertEq(insure.getReserves(), 3 ether - payout);
-    }
+    uint256 payout = insure.processClaim(betId);
+
+    assertTrue(payout <= insuredAmount);
+    assertTrue(payout <= 3 ether);
+    assertEq(insure.getReserves(), 3 ether - payout);
+}
+
 }
